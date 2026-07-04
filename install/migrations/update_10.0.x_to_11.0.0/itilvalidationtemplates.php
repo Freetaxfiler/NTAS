@@ -1,0 +1,69 @@
+<?php
+
+/**
+ * Naipunya Enterprise Service Management
+ * Copyright (C) 2026 Naipunya Tax and Accounting Solutions Pvt.Ltd.
+ */
+
+/**
+ * @var DBmysql $DB
+ * @var Migration $migration
+ */
+$default_charset = DBConnection::getDefaultCharset();
+$default_collation = DBConnection::getDefaultCollation();
+$default_key_sign = DBConnection::getDefaultPrimaryKeySignOption();
+
+// Add ITILValidationTemplates table
+if (!$DB->tableExists('ntas_itilvalidationtemplates')) {
+    $query = "CREATE TABLE `ntas_itilvalidationtemplates` (
+        `id` int {$default_key_sign} NOT NULL AUTO_INCREMENT,
+        `entities_id` int {$default_key_sign} NOT NULL DEFAULT '0',
+        `is_recursive` tinyint NOT NULL DEFAULT '0',
+        `name` varchar(255) NOT NULL DEFAULT '',
+        `content` text,
+        `comment` text,
+        `date_mod` timestamp NULL DEFAULT NULL,
+        `date_creation` timestamp NULL DEFAULT NULL,
+        PRIMARY KEY (`id`),
+        KEY `entities_id` (`entities_id`),
+        KEY `is_recursive` (`is_recursive`),
+        KEY `name` (`name`),
+        KEY `date_mod` (`date_mod`),
+        KEY `date_creation` (`date_creation`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=$default_charset COLLATE=$default_collation ROW_FORMAT=DYNAMIC;";
+    $DB->doQuery($query);
+}
+
+// Add ITILValidationTemplatesTargets table
+if (!$DB->tableExists('ntas_itilvalidationtemplates_targets')) {
+    $query = "CREATE TABLE `ntas_itilvalidationtemplates_targets` (
+        `id` int {$default_key_sign} NOT NULL AUTO_INCREMENT,
+        `itilvalidationtemplates_id` int {$default_key_sign} NOT NULL DEFAULT '0',
+        `itemtype` varchar(100) DEFAULT NULL,
+        `items_id` int {$default_key_sign} NOT NULL DEFAULT '0',
+        `groups_id` int {$default_key_sign} DEFAULT NULL,
+        PRIMARY KEY (`id`),
+        KEY `itilvalidationtemplates_id` (`itilvalidationtemplates_id`),
+        KEY `item` (`itemtype`,`items_id`),
+        KEY `groups_id` (`groups_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=$default_charset COLLATE=$default_collation ROW_FORMAT=DYNAMIC;";
+    $DB->doQuery($query);
+}
+
+$table = 'ntas_changevalidations';
+// Add new 'itilvalidationtemplates_id' field on 'ntas_changevalidations' table
+$fkey_to_add = 'itilvalidationtemplates_id';
+if (!$DB->fieldExists($table, $fkey_to_add, false)) {
+    $migration->addField($table, $fkey_to_add, 'fkey', ['after' => 'users_id_validate']);
+    $migration->addKey($table, $fkey_to_add);
+}
+
+$table = 'ntas_ticketvalidations';
+// Add new 'itilvalidationtemplates_id' field on 'ntas_ticketvalidations' table
+$fkey_to_add = 'itilvalidationtemplates_id';
+if (!$DB->fieldExists($table, $fkey_to_add, false)) {
+    $migration->addField($table, $fkey_to_add, 'fkey', ['after' => 'users_id_validate']);
+    $migration->addKey($table, $fkey_to_add);
+}
+
+$migration->addRight('itilvalidationtemplate', ALLSTANDARDRIGHT, ['dropdown' => UPDATE]);

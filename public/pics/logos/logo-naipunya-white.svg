@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 120" width="540" height="120">
+  <defs>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e52cf" />
+      <stop offset="100%" stop-color="#103aa2" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Icon Squircle -->
+  <rect x="10" y="10" width="100" height="100" rx="22" fill="url(#blueGrad)" />
+  
+  <!-- Stylized N -->
+  <path d="M 34 90 L 34 30 L 48 30 L 72 78 L 72 30 L 86 30 L 86 90 L 72 90 L 48 42 L 48 90 Z" fill="#a8d5ff" />
+  
+  <!-- Checkmark -->
+  <path d="M 36 68 L 48 80 L 88 40 L 94 46 L 48 91 L 30 73 Z" fill="#ffd700" stroke="#103aa2" stroke-width="1.5" stroke-linejoin="round" />
+  
+  <!-- Bar Chart -->
+  <rect x="22" y="80" width="5" height="10" rx="1" fill="#ffd700" />
+  <rect x="29" y="74" width="5" height="16" rx="1" fill="#ffd700" />
+  <rect x="36" y="66" width="5" height="24" rx="1" fill="#ffd700" />
+  
+  <!-- Text -->
+  <text x="135" y="70" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="56" font-weight="900" fill="#ffffff" letter-spacing="1">NAIPUNYA</text>
+  <text x="138" y="96" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11.5" font-weight="800" fill="#cbd5e0" letter-spacing="1.8">TAX AND ACCOUNTING SOLUTIONS PVT.LTD</text>
+</svg>

@@ -1,0 +1,33 @@
+<?php
+
+/**
+ * Naipunya Enterprise Service Management
+ * Copyright (C) 2026 Naipunya Tax and Accounting Solutions Pvt.Ltd.
+ */
+
+require_once(__DIR__ . '/_check_webserver_config.php');
+
+use Glpi\Exception\Http\AccessDeniedHttpException;
+
+global $CFG_GLPI;
+
+$itemDevice = getItemForItemtype($_GET['itemtype']);
+if (!$itemDevice) {
+    throw new RuntimeException(
+        'Missing or incorrect item device type called!'
+    );
+}
+
+if (!$itemDevice->canView()) {
+    throw new AccessDeniedHttpException();
+}
+
+if (in_array($itemDevice->getType(), $CFG_GLPI['devices_in_menu'])) {
+    Html::header($itemDevice->getTypeName(Session::getPluralNumber()), '', "assets", strtolower($itemDevice->getType()));
+} else {
+    Html::header($itemDevice->getTypeName(Session::getPluralNumber()), '', "config", "commondevice", $itemDevice->getType());
+}
+
+Search::show($itemDevice->getType());
+
+Html::footer();

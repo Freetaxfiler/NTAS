@@ -1,0 +1,443 @@
+<?php
+
+/**
+ * Naipunya Enterprise Service Management
+ * Copyright (C) 2026 Naipunya Tax and Accounting Solutions Pvt.Ltd.
+ */
+
+use Glpi\Application\View\TemplateRenderer;
+use Glpi\DBAL\QueryFunction;
+
+/**
+ * ProjectTask_Ticket Class
+ *
+ * Relation between ProjectTasks and Tickets
+ *
+ * @since 0.85
+ **/
+class ProjectTask_Ticket extends CommonDBRelation
+{
+    // From CommonDBRelation
+    public static $itemtype_1 = ProjectTask::class;
+    public static $items_id_1   = 'projecttasks_id';
+
+    public static $itemtype_2 = Ticket::class;
+    public static $items_id_2   = 'tickets_id';
+
+    public function getForbiddenStandardMassiveAction()
+    {
+        $forbidden   = parent::getForbiddenStandardMassiveAction();
+        $forbidden[] = 'update';
+        return $forbidden;
+    }
+
+    public function prepareInputForAdd($input)
+    {
+        if (
+            countElementsInTable(
+                static::getTable(),
+                [
+                    static::$items_id_1 => $input[static::$items_id_1] ?? 0,
+                    static::$items_id_2 => $input[static::$items_id_2] ?? 0,
+                ]
+            ) > 0
+        ) {
+            Session::addMessageAfterRedirect(__s('Relation already exists.'), false, ERROR);
+            return false;
+        }
+
+        return parent::prepareInputForAdd($input);
+    }
+
+    public static function getTypeName($nb = 0)
+    {
+        return _n('Link Ticket/Project task', 'Links Ticket/Project task', $nb);
+    }
+
+    public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
+    {
+        if (static::canView()) {
+            $nb = 0;
+            switch ($item::class) {
+                case ProjectTask::class:
+                    if ($_SESSION['glpishow_count_on_tabs']) {
+                        $nb = self::countForItem($item);
+                    }
+                    return self::createTabEntry(Ticket::getTypeName(Session::getPluralNumber()), $nb, $item::class);
+
+                case Ticket::class:
+                    if ($_SESSION['glpishow_count_on_tabs']) {
+                        $nb = self::countForItem($item);
+                    }
+                    return self::createTabEntry(ProjectTask::getTypeName(Session::getPluralNumber()), $nb, $item::class);
+            }
+        }
+        return '';
+    }
+
+    public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
+    {
+        switch ($item::class) {
+            case ProjectTask::class:
+                self::showForProjectTask($item);
+                break;
+            case Ticket::class:
+                self::showForTicket($item);
+                break;
+        }
+        return true;
+    }
+
+    /**
+     * Get total duration of tickets linked to a project task
+     *
+     * @param int $projecttasks_id ID of the project task
+     *
+     * @return int total actiontime
+     **/
+    public static function getTicketsTotalActionTime($projecttasks_id)
+    {
+        global $DB;
+
+        $iterator = $DB->request([
+            'SELECT'    => [
+                QueryFunction::sum(
+                    expression: 'ntas_tickets.actiontime',
+                    alias: 'duration'
+                ),
+            ],
+            'FROM'         => self::getTable(),
+            'INNER JOIN'   => [
+                'ntas_tickets' => [
+                    'FKEY'   => [
+                        self::getTable()  => 'tickets_id',
+                        'ntas_tickets'    => 'id',
+                    ],
+                ],
+            ],
+            'WHERE'        => ['projecttasks_id' => $projecttasks_id],
+        ]);
+
+        return count($iterator) ? $iterator->current()['duration'] : 0;
+    }
+
+    /**
+     * Show tickets for a projecttask
+     *
+     * @param ProjectTask $projecttask object
+     * @return void|false
+     **/
+    public static function showForProjectTask(ProjectTask $projecttask)
+    {
+        $ID = $projecttask->getField('id');
+        if (!$projecttask->can($ID, READ)) {
+            return false;
+        }
+
+        $canedit = $projecttask->canEdit($ID);
+        $rand    = mt_rand();
+
+        $iterator = self::getListForItem($projecttask);
+
+        $tickets = [];
+        $used    = [];
+        foreach ($iterator as $data) {
+            $tickets[$data['id']] = $data;
+            $used[$data['id']]    = $data['id'];
+        }
+
+        if ($canedit) {
+            $condition = [
+                'NOT' => [
+                    'ntas_tickets.status'    => array_merge(
+                        Ticket::getSolvedStatusArray(),
+                        Ticket::getClosedStatusArray()
+                    ),
+                ],
+            ];
+            echo TemplateRenderer::getInstance()->render('components/form/link_existing_or_new.html.twig', [
+                'rand' => $rand,
+                'link_itemtype' => self::class,
+                'source_itemtype' => ProjectTask::class,
+                'source_items_id' => $ID,
+                'target_itemtype' => Ticket::class,
+                'dropdown_options' => [
+                    'entity'      => $projecttask->getEntityID(),
+                    'entity_sons' => $projecttask->isRecursive(),
+                    'used'        => $used,
+                    'displaywith' => ['id'],
+                    'condition'   => $condition,
+                ],
+                'create_link' => Session::haveRight(Ticket::$rightname, CREATE),
+                'form_label' => __('Add a ticket'),
+                'button_label' => __('Create a ticket from this project task'),
+            ]);
+        }
+
+        [$columns, $formatters] = array_values(Ticket::getCommonDatatableColumns());
+        $entries = Ticket::getDatatableEntries(array_map(static function ($t) {
+            $t['itemtype'] = Ticket::class;
+            $t['item_id'] = $t['id'];
+            return $t;
+        }, $tickets));
+        $entries = array_map(static function ($entry) {
+            $entry['itemtype'] = self::class;
+            $entry['id'] = $entry['linkid'];
+            return $entry;
+        }, $entries);
+
+        TemplateRenderer::getInstance()->display('components/datatable.html.twig', [
+            'is_tab' => true,
+            'nofilter' => true,
+            'nosort' => true,
+            'columns' => $columns,
+            'formatters' => $formatters,
+            'entries' => $entries,
+            'total_number' => count($entries),
+            'filtered_number' => count($entries),
+            'showmassiveactions' => $canedit,
+            'massiveactionparams' => [
+                'num_displayed' => count($entries),
+                'container'     => 'mass' . static::class . $rand,
+            ],
+        ]);
+    }
+
+    /**
+     * Show projecttasks for a ticket
+     *
+     * @param Ticket $ticket object
+     * @return void|false
+     **/
+    public static function showForTicket(Ticket $ticket)
+    {
+        global $CFG_GLPI, $DB;
+
+        $ID = $ticket->getField('id');
+        if (!$ticket->can($ID, READ)) {
+            return false;
+        }
+
+        $canedit = $ticket->canEdit($ID);
+        $rand = mt_rand();
+
+        $iterator = self::getListForItem($ticket);
+
+        $used    = [];
+        foreach ($iterator as $data) {
+            $used[$data['id']]    = $data['id'];
+        }
+
+        if (
+            $canedit
+            && !in_array((int) $ticket->fields['status'], array_merge(
+                $ticket->getClosedStatusArray(),
+                $ticket->getSolvedStatusArray()
+            ), true)
+        ) {
+            $finished_states_it = $DB->request(
+                [
+                    'SELECT' => ['id'],
+                    'FROM'   => ProjectState::getTable(),
+                    'WHERE'  => [
+                        'is_finished' => 1,
+                    ],
+                ]
+            );
+            $finished_states_ids = [];
+            foreach ($finished_states_it as $finished_state) {
+                $finished_states_ids[] = $finished_state['id'];
+            }
+
+            $p = [
+                'projects_id'     => '__VALUE__',
+                'entity_restrict' => $ticket->getEntityID(),
+                'used'            => $used,
+                'rand'            => $rand,
+                'myname'          => "projecttasks",
+            ];
+
+            $project_conditions = [
+                'ntas_projects.is_template' => 0,
+            ];
+
+            if (count($finished_states_ids)) {
+                $project_conditions['ntas_projects.projectstates_id'] = ['NOT IN', $finished_states_ids];
+            }
+
+            echo TemplateRenderer::getInstance()->render('components/form/link_existing_or_new.html.twig', [
+                'rand' => $rand,
+                'link_itemtype' => self::class,
+                'source_itemtype' => Ticket::class,
+                'source_items_id' => $ID,
+                'target_itemtype' => ProjectTask::class,
+                'dropdown_options' => [
+                    'label'       => Project::getTypeName(1),
+                    'itemtype' => Project::class,
+                    'entity'      => $ticket->getEntityID(),
+                    'entity_sons' => $ticket->isRecursive(),
+                    'condition'   => $project_conditions,
+                ],
+                'ajax_dropdown' => [
+                    'toobserve' => "dropdown_projects_id$rand",
+                    'toupdate' => [
+                        "id" => "results_projects$rand",
+                        "itemtype" => ProjectTask::class,
+                        "params" => [],
+                    ],
+                    'url' => $CFG_GLPI["root_doc"] . "/ajax/dropdownProjectTaskTicket.php",
+                    'params' => $p,
+                ],
+                'create_link' => false,
+                'form_label' => __('Add a project task'),
+                'button_label' => __('Create a project task from this ticket'),
+            ]);
+        }
+
+        $columns = [
+            'projectname'      => Project::getTypeName(Session::getPluralNumber()),
+            'name'             => ProjectTask::getTypeName(Session::getPluralNumber()),
+            'tname'            => _n('Type', 'Types', 1),
+            'sname'            => __('Status'),
+            'percent_done'     => __('Percent done'),
+            'plan_start_date'  => __('Planned start date'),
+            'plan_end_date'    => __('Planned end date'),
+            'planned_duration' => __('Planned duration'),
+            '_effect_duration' => __('Effective duration'),
+            'fname'            => __('Father'),
+        ];
+
+        if (isset($_GET["order"]) && ($_GET["order"] === "DESC")) {
+            $order = "DESC";
+        } else {
+            $order = "ASC";
+        }
+
+        if (empty($_GET["sort"])) {
+            $_GET["sort"] = "plan_start_date";
+        }
+
+        if (!empty($_GET["sort"]) && isset($columns[$_GET["sort"]])) {
+            $sort = $_GET["sort"];
+        } else {
+            $sort = ["plan_start_date $order", 'name'];
+        }
+        $iterator = $DB->request([
+            'SELECT'    => [
+                'ntas_projecttasks.*',
+                'ntas_projecttasktypes.name AS tname',
+                'ntas_projectstates.name AS sname',
+                'ntas_projectstates.color',
+                'father.name AS fname',
+                'father.id AS fID',
+                'ntas_projects.name AS projectname',
+                'ntas_projects.content AS projectcontent',
+                'ntas_projecttasks_tickets.id AS linkid',
+            ],
+            'FROM'      => 'ntas_projecttasks',
+            'LEFT JOIN' => [
+                'ntas_projecttasktypes' => [
+                    'ON' => [
+                        'ntas_projecttasktypes' => 'id',
+                        'ntas_projecttasks'     => 'projecttasktypes_id',
+                    ],
+                ],
+                'ntas_projectstates'    => [
+                    'ON' => [
+                        'ntas_projectstates' => 'id',
+                        'ntas_projecttasks'  => 'projectstates_id',
+                    ],
+                ],
+                'ntas_projecttasks AS father' => [
+                    'ON' => [
+                        'father'             => 'id',
+                        'ntas_projecttasks'  => 'projecttasks_id',
+                    ],
+                ],
+                'ntas_projecttasks_tickets'   => [
+                    'ON' => [
+                        'ntas_projecttasks_tickets'   => 'projecttasks_id',
+                        'ntas_projecttasks'           => 'id',
+                    ],
+                ],
+                'ntas_projects'               => [
+                    'ON' => [
+                        'ntas_projecttasks'  => 'projects_id',
+                        'ntas_projects'      => 'id',
+                    ],
+                ],
+            ],
+            'WHERE'     => [
+                'ntas_projecttasks_tickets.tickets_id' => $ID,
+            ],
+            'ORDERBY'   => [
+                "$sort $order",
+            ],
+        ]);
+
+        $entries = [];
+        foreach ($iterator as $data) {
+            $project_name = htmlescape($data['projectname'] . (empty($data['projectname']) ? "({$data['projects_id']})" : ''));
+            $projectlink = "<a href='" . htmlescape(Project::getFormURLWithID($data['projects_id'])) . "'>$project_name</a>";
+            $task_name = htmlescape($data['name'] . (empty($data['name']) ? "({$data['id']})" : ''));
+            $tasklink = "<a href='" . htmlescape(ProjectTask::getFormURLWithID($data['id'])) . "'>$task_name</a>";
+
+            $father = '';
+            if ($data['projecttasks_id'] > 0) {
+                $father_name = Dropdown::getDropdownName('ntas_projecttasks', $data['projecttasks_id']);
+                $father = sprintf(
+                    '<a href="%s">%s</a>',
+                    htmlescape(ProjectTask::getFormURLWithID($data['projecttasks_id'])),
+                    htmlescape($father_name ?: "(" . $data['projecttasks_id'] . ")")
+                );
+            }
+
+            $status = $data['sname'];
+
+            if (!empty($status)) {
+                $fg_color = Toolbox::getFgColor($data['color']);
+                $status_badge_style = "background-color:{$data['color']}; color:{$fg_color};";
+                $status = '<span class="badge" style="' . htmlescape($status_badge_style) . '">' . htmlescape($data['sname']) . '</span>';
+            }
+
+            $entries[] = [
+                'itemtype' => self::class,
+                'id'       => $data['linkid'],
+                'projectname' => $projectlink,
+                'name' => $tasklink,
+                'tname' => $data['tname'],
+                'sname' => $status,
+                'percent_done' => Dropdown::getValueWithUnit($data["percent_done"], "%"),
+                'plan_start_date' => $data['plan_start_date'],
+                'plan_end_date' => $data['plan_end_date'],
+                'planned_duration' => $data['planned_duration'],
+                '_effect_duration' => ProjectTask::getTotalEffectiveDuration($data['id']),
+                'fname' => $father,
+            ];
+        }
+
+        TemplateRenderer::getInstance()->display('components/datatable.html.twig', [
+            'is_tab' => true,
+            'nofilter' => true,
+            'columns' => $columns,
+            'formatters' => [
+                'projectname' => 'raw_html',
+                'name' => 'raw_html',
+                'sname' => 'raw_html',
+                'plan_start_date' => 'datetime',
+                'plan_end_date' => 'datetime',
+                'planned_duration' => 'duration',
+                '_effect_duration' => 'duration',
+                'fname' => 'raw_html',
+            ],
+            'entries' => $entries,
+            'total_number' => count($entries),
+            'filtered_number' => count($entries),
+            'showmassiveactions' => $canedit,
+            'massiveactionparams' => [
+                'num_displayed' => count($entries),
+                'container'     => 'mass' . static::class . $rand,
+            ],
+        ]);
+    }
+}

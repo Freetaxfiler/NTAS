@@ -1,0 +1,45 @@
+<?php
+
+/**
+ * Naipunya Enterprise Service Management
+ * Copyright (C) 2026 Naipunya Tax and Accounting Solutions Pvt.Ltd.
+ */
+
+/**
+ * @var DBmysql $DB
+ * @var Migration $migration
+ */
+$default_key_sign = DBConnection::getDefaultPrimaryKeySignOption();
+
+$validation_tables = ['ntas_ticketvalidations', 'ntas_changevalidations'];
+
+$needed_migration = false;
+
+foreach ($validation_tables as $validation_table) {
+    if (!$DB->fieldExists($validation_table, 'itemtype_target')) {
+        $migration->addField($validation_table, 'itemtype_target', 'varchar(255) NOT NULL', [
+            'after'     => 'users_id_validate',
+            'update'    => "'User'",
+        ]);
+        $needed_migration = true;
+    }
+    if (!$DB->fieldExists($validation_table, 'items_id_target')) {
+        $migration->addField($validation_table, 'items_id_target', "int {$default_key_sign} NOT NULL DEFAULT '0'", [
+            'after'     => 'itemtype_target',
+            'update'    => $DB->quoteName($validation_table . '.users_id_validate'),
+        ]);
+        $needed_migration = true;
+    }
+    $migration->addKey($validation_table, ['itemtype_target', 'items_id_target'], 'item_target');
+}
+
+// Update notification template targets to replace VALIDATION_APPROVER (14) with VALIDATION_TARGET (40) to match previous behavior as close as possible
+
+// Use the fact fields had changed as an indication this one-time migration hasn't been run yet
+if ($needed_migration) {
+    $DB->update('ntas_notificationtargets', [
+        'items_id'  => Notification::VALIDATION_TARGET,
+    ], [
+        'items_id'  => Notification::VALIDATION_APPROVER,
+    ]);
+}

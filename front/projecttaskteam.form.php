@@ -1,0 +1,36 @@
+<?php
+
+/**
+ * Naipunya Enterprise Service Management
+ * Copyright (C) 2026 Naipunya Tax and Accounting Solutions Pvt.Ltd.
+ */
+
+require_once(__DIR__ . '/_check_webserver_config.php');
+
+use Glpi\Event;
+use Glpi\Exception\Http\BadRequestHttpException;
+
+/**
+ * @since 0.85
+ */
+
+Session::checkCentralAccess();
+
+$team = new ProjectTaskTeam();
+
+if (isset($_POST["add"])) {
+    $team->check(-1, CREATE, $_POST);
+    if ($team->add($_POST)) {
+        Event::log(
+            $_POST["projecttasks_id"],
+            "projecttask",
+            4,
+            "maintain",
+            //TRANS: %s is the user login
+            sprintf(__('%s adds a team member'), $_SESSION["glpiname"])
+        );
+    }
+    Html::back();
+}
+
+throw new BadRequestHttpException();

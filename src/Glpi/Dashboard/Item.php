@@ -1,0 +1,118 @@
+<?php
+
+/**
+ * Naipunya Enterprise Service Management
+ * Copyright (C) 2026 Naipunya Tax and Accounting Solutions Pvt.Ltd.
+ */
+
+namespace Glpi\Dashboard;
+
+use CommonDBChild;
+use Glpi\DBAL\QueryParam;
+
+class Item extends CommonDBChild
+{
+    public static $itemtype = Dashboard::class;
+    public static $items_id = 'dashboards_dashboards_id';
+
+    /**
+     * Return items for the provided dashboard
+     *
+     * @param int $dashboards_id
+     *
+     * @return array the items
+     */
+    public static function getForDashboard(int $dashboards_id = 0): array
+    {
+        global $DB;
+
+        $di_iterator = $DB->request([
+            'FROM'  => self::getTable(),
+            'WHERE' => [
+                'dashboards_dashboards_id' => $dashboards_id,
+            ],
+        ]);
+
+        $items = [];
+        foreach ($di_iterator as $item) {
+            unset($item['id']);
+            $item['card_options'] = importArrayFromDB($item['card_options']);
+
+            // [x,y, width, height] may have been nulled in DB
+            $item['x']      = (int) ($item['x'] ?? 0);
+            $item['y']      = (int) ($item['y'] ?? 0);
+            $item['width']  = (int) ($item['width'] ?? 0);
+            $item['height'] = (int) ($item['height'] ?? 0);
+
+            $items[] = $item;
+        }
+
+        return $items;
+    }
+
+
+    /**
+     * Save items in DB for the provided dashboard
+     *
+     * @param int $dashboards_id id (not key) of the dashboard
+     * @param array $items cards of the dashboard, contains:
+     *    - gridstack_id: unique id of the card in the grid, usually build like card_id.uuidv4
+     *    - card_id: key of array return by getAllDasboardCards
+     *    - x: position in grid
+     *    - y: position in grid
+     *    - width: size in grid
+     *    - height: size in grid
+     *    - card_options, sub array, depends on the card, contains at least a key color
+     *
+     * @return void
+     */
+    public static function addForDashboard(int $dashboards_id = 0, array $items = [])
+    {
+        global $DB;
+
+        $query_items = $DB->buildInsert(
+            self::getTable(),
+            [
+                'dashboards_dashboards_id' => new QueryParam(),
+                'gridstack_id' => new QueryParam(),
+                'card_id'      => new QueryParam(),
+                'x'            => new QueryParam(),
+                'y'            => new QueryParam(),
+                'width'        => new QueryParam(),
+                'height'       => new QueryParam(),
+                'card_options' => new QueryParam(),
+            ]
+        );
+        $stmt = $DB->prepare($query_items);
+        foreach ($items as $item_key => $item) {
+            // card_options should be unescaped as they will be json_encoded after
+            $card_options = $_REQUEST['items'][$item_key]['card_options'] ?? $item['card_options'] ?? [];
+
+            // clean
+            unset(
+                $card_options['force'],
+                $card_options['card_id'],
+                $card_options['gridstack_id']
+            );
+
+            // encode for DB
+            $card_options = exportArrayToDB($card_options);
+            $gridstack_id = $item['gridstack_id'] ?? $item['gs_id'];
+
+            $DB->executeStatement(
+                $stmt,
+                [
+                    $dashboards_id,
+                    $gridstack_id,
+                    $item['card_id'],
+                    $item['x'],
+                    $item['y'],
+                    $item['width'],
+                    $item['height'],
+                    $card_options,
+                ],
+                ['i', 's', 's', 'i', 'i', 'i', 'i', 's']
+            );
+        }
+    }
+}

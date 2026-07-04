@@ -1,0 +1,21 @@
+<?php
+
+/**
+ * Naipunya Enterprise Service Management
+ * Copyright (C) 2026 Naipunya Tax and Accounting Solutions Pvt.Ltd.
+ */
+
+namespace Glpi\Api\HL\Doc;
+
+use Attribute;
+
+#[Attribute(Attribute::TARGET_METHOD)]
+class DeleteRoute extends Route
+{
+    public function __construct(string $schema_name, ?string $description = null)
+    {
+        parent::__construct(
+            description: $description ?? 'Delete a ' . $schema_name,
+        );
+    }
+}
