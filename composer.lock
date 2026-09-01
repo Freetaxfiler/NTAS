@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2ee94d6b2ab6bf73f3b381be1ee22569",
+    "content-hash": "cbdadb90a72426e29204e6791cf2b528",
     "packages": [
         {
             "name": "altcha-org/altcha",
@@ -8737,32 +8737,33 @@
         },
         {
             "name": "tecnickcom/tc-lib-barcode",
-            "version": "2.4.39",
+            "version": "2.14.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/tecnickcom/tc-lib-barcode.git",
-                "reference": "11886fb5a44ec0f6e77302439e9ebf55034383fa"
+                "reference": "4360438c37084f2ba03a4d67284004e11c6708a0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/tecnickcom/tc-lib-barcode/zipball/11886fb5a44ec0f6e77302439e9ebf55034383fa",
-                "reference": "11886fb5a44ec0f6e77302439e9ebf55034383fa",
+                "url": "https://api.github.com/repos/tecnickcom/tc-lib-barcode/zipball/4360438c37084f2ba03a4d67284004e11c6708a0",
+                "reference": "4360438c37084f2ba03a4d67284004e11c6708a0",
                 "shasum": ""
             },
             "require": {
-                "ext-bcmath": "*",
-                "ext-date": "*",
+                "ext-ctype": "*",
                 "ext-gd": "*",
                 "ext-pcre": "*",
-                "php": ">=8.1",
-                "tecnickcom/tc-lib-color": "^2.5"
+                "php": "^8.2",
+                "tecnickcom/tc-lib-color": "^3.0"
             },
             "require-dev": {
+                "carthage-software/mago": "^1.47.4",
                 "pdepend/pdepend": "^2.16",
-                "phpcompatibility/php-compatibility": "^10.0.0@dev",
-                "phpmd/phpmd": "^2.15",
-                "phpunit/phpunit": "^13.1 || ^12.5 || ^11.5 || ^10.5",
-                "squizlabs/php_codesniffer": "^4.0"
+                "phpunit/phpunit": "^11.5 || ^12.5 || ^13.3"
+            },
+            "suggest": {
+                "ext-bcmath": "Speeds up the arbitrary precision arithmetic used by the IMB and PDF417 barcode types (a pure-PHP implementation is used when missing)",
+                "ext-imagick": "Alternative PNG renderer used by getPngData() when the extension is loaded"
             },
             "type": "library",
             "autoload": {
@@ -8834,30 +8835,30 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-05-01T19:04:12+00:00"
+            "time": "2026-08-27T14:19:38+00:00"
         },
         {
             "name": "tecnickcom/tc-lib-color",
-            "version": "2.8.0",
+            "version": "3.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/tecnickcom/tc-lib-color.git",
-                "reference": "6947cc9fffe23a21642279b8ab73a43f3311c5f9"
+                "reference": "e6b9f583cf4c5126de158b8e0d99f61ffa7917ad"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/tecnickcom/tc-lib-color/zipball/6947cc9fffe23a21642279b8ab73a43f3311c5f9",
-                "reference": "6947cc9fffe23a21642279b8ab73a43f3311c5f9",
+                "url": "https://api.github.com/repos/tecnickcom/tc-lib-color/zipball/e6b9f583cf4c5126de158b8e0d99f61ffa7917ad",
+                "reference": "e6b9f583cf4c5126de158b8e0d99f61ffa7917ad",
                 "shasum": ""
             },
             "require": {
                 "ext-pcre": "*",
-                "php": ">=8.2"
+                "php": "^8.2"
             },
             "require-dev": {
+                "carthage-software/mago": "^1.47.4",
                 "pdepend/pdepend": "^2.16",
-                "phpcompatibility/php-compatibility": "^10.0.0@dev",
-                "phpunit/phpunit": "^13.1 || ^12.5 || ^11.5"
+                "phpunit/phpunit": "^11.5 || ^12.5 || ^13.3"
             },
             "type": "library",
             "autoload": {
@@ -8879,16 +8880,24 @@
             "description": "PHP library to manipulate various color representations",
             "homepage": "https://tcpdf.org",
             "keywords": [
+                "cielab",
                 "cmyk",
                 "color",
                 "colors",
                 "colour",
                 "colours",
+                "css",
+                "gray",
+                "grayscale",
                 "hsl",
                 "hsla",
                 "javascript",
+                "lab",
+                "pdf",
                 "rgb",
                 "rgba",
+                "separation",
+                "spot",
                 "tc-lib-color",
                 "web"
             ],
@@ -8902,7 +8911,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-05-22T06:55:57+00:00"
+            "time": "2026-08-26T19:01:04+00:00"
         },
         {
             "name": "tecnickcom/tcpdf",
